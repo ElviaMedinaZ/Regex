@@ -66,7 +66,7 @@ public class DMLScannerGUI extends JFrame {
         RELATIONAL_OPERATORS.put("<=", 85);
     }
 
-    private static final Pattern TOKEN_PATTERN = Pattern.compile("[A-Za-z_#][A-Za-z0-9_#]*|\\d+|'[^']*'");
+    private static final Pattern TOKEN_PATTERN = Pattern.compile("[A-Za-z_#][A-Za-z0-9_#]*|\\d+|'[^']*'|[(),;]");
 
     public static void main(String[] args) {
         EventQueue.invokeLater(() -> {
@@ -102,7 +102,7 @@ public class DMLScannerGUI extends JFrame {
         botonAnalizar.addActionListener(e -> analizarConsultaSQL());
 
         modeloPalabrasReservadas = new DefaultTableModel(new String[]{"Token", "Línea", "Valor"}, 0);
-        modeloConstantes = new DefaultTableModel(new String[]{"Constante", "Línea", "Valor"}, 0);
+        modeloConstantes = new DefaultTableModel(new String[]{"Constante", "Línea","Tipo", "Valor"}, 0);
         modeloIdentificadores = new DefaultTableModel(new String[]{"Identificador", "Línea", "Valor"}, 0);
         modeloTokens = new DefaultTableModel(new String[]{"No.", "Línea", "Token", "Tipo", "Código"}, 0);
 
@@ -203,7 +203,8 @@ public class DMLScannerGUI extends JFrame {
                 modeloPalabrasReservadas.addRow(new Object[]{token, lineasTexto, codigo});
             } else if (tipo == 6) {
                 String constanteSinComillas = token.replaceAll("^'(.*)'$", "$1");
-                modeloConstantes.addRow(new Object[]{constanteSinComillas, lineasTexto, codigo});
+                int tipoConstante = token.matches("\\d+") ? 61 : 62; // 61 para números, 62 para texto
+                modeloConstantes.addRow(new Object[]{constanteSinComillas, lineasTexto,tipoConstante, codigo});
             } else {
                 modeloIdentificadores.addRow(new Object[]{token, lineasTexto, codigo});
             }
@@ -266,7 +267,7 @@ public class DMLScannerGUI extends JFrame {
         if (token.matches("'[^']*'") || token.matches("\\d+")) {
             return 6;
         }
-        return 9;
+        return 4;
     }
 
     private int obtenerCodigo(String token) {
