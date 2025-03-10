@@ -74,9 +74,8 @@ public class AnalizadorSQL extends JFrame {
         RELATIONAL_OPERATORS.put("<=", 8);
     }
     private static final Pattern TOKEN_PATTERN = Pattern.compile(
-    		 "[A-Za-z_][A-Za-z0-9_]*|\\d+|'[^']*'|]"
-    		
-    	);
+    "[A-Za-z_][A-Za-z0-9_#]*|\\d+|'[^']*'|[.,()=<>+*/-]"
+    );
 
 
     public static void main(String[] args) {
@@ -181,7 +180,7 @@ public class AnalizadorSQL extends JFrame {
         
 
         // Reemplazar comillas incorrectas
-        input = input.replace("‘", "'").replace("’", "'");
+        input = input.replaceAll("([,()=<>+*/-])", " $1 ");
 
         // Limpiar las tablas
         modeloPalabrasReservadas.setRowCount(0);
@@ -214,39 +213,14 @@ public class AnalizadorSQL extends JFrame {
             Matcher matcher = TOKEN_PATTERN.matcher(linea);
             while (matcher.find()) {
                 String token = matcher.group();
-                
-                if (token.matches("(?i)A|AN|AD|ND|A D|A N|A\\s*D|A\\s*N|A\\s*")) {
-                    JOptionPane.showMessageDialog(this, 
-                        "Error: '" + token + "' no es un operador válido. Debes escribir 'AND' completo.", 
-                        "Error de Sintaxis", 
-                        JOptionPane.ERROR_MESSAGE);
-                    return;  // Detiene el análisis
-                }
-
+                System.out.println("Token encontrado: " + token);  // <-- Depuración
                 
                 int tipoCodigo = obtenerCodigoTipo(token);
-
-//                // Validar la palabra reservada correctamente escrita (en mayúsculas)
-//                if (RESERVED_WORDS.containsKey(token.toUpperCase())) {
-//                    // Verificar si la palabra está en mayúsculas
-//                    if (!token.equals(token.toUpperCase())) {
-//                        JOptionPane.showMessageDialog(this, "Palabra reservada '" + token + "' escrita incorrectamente (debe estar en mayúsculas).", "Error", JOptionPane.ERROR_MESSAGE);
-//                        return; // Si hay error en la palabra reservada, terminamos el análisis
-//                    }
-//                }
-
-                // Si el token ya existe, agregar las líneas
-                if (tokensConLineas.containsKey(token)) {
-                    String lineasExistentes = tokensConLineas.get(token);
-                    lineasExistentes += "," + numLinea;
-                    tokensConLineas.put(token, lineasExistentes);
-                } else {
-                    // Si no existe, guardar la línea inicial
-                    tokensConLineas.put(token, String.valueOf(numLinea));
-                }
+                tokensConLineas.put(token, String.valueOf(numLinea));
             }
             numLinea++;
         }
+        
 
         // Procesar tokens y asignarles tipo
         for (Map.Entry<String, String> entry : tokensConLineas.entrySet()) {
@@ -275,29 +249,10 @@ public class AnalizadorSQL extends JFrame {
     // Método para validar la sintaxis de la consulta SQL
  // Método para validar la sintaxis de la consulta SQL
     private boolean esConsultaSQLValida(String consulta) {
-        // Expresión regular que valida una consulta SQL básica
-        // Permite que la consulta empiece con cualquier palabra clave reservada válida (como SELECT, INSERT, etc.)
-        String regex = "(?i)(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP)\\s+" +  // Permitir palabras clave iniciales
-                       "(\\*|[A-Za-z_][A-Za-z0-9_,\\s]+)\\s+" + // Selección de campos
-                       "FROM\\s+[A-Za-z_][A-Za-z0-9_,\\s]+\\s+" + // Tabla desde la que seleccionar
-                       "(WHERE\\s+[A-Za-z_][A-Za-z0-9_\\s=><']+)?"+ // Condiciones opcionales
-                       "(AND|OR\\s+[A-Za-z_][A-Za-z0-9_\\s=><']+)*"; // Operadores lógicos opcionales
-
-        Pattern pattern = Pattern.compile(regex);
+        String regex = "(?i)\\s*SELECT\\s+.+?\\s+FROM\\s+.+?(\\s+WHERE\\s+.+)?;?";
+        Pattern pattern = Pattern.compile(regex, Pattern.DOTALL);
         Matcher matcher = pattern.matcher(consulta);
-        if (matcher.matches()) {
-            return true; // Si la consulta coincide con la expresión regular, es válida
-        }
-        
-        // Si no es válida, verificamos que no haya palabras "raras" (no reservadas)
-        String[] palabras = consulta.split("\\s+");
-        for (String palabra : palabras) {
-            if (!RESERVED_WORDS.containsKey(palabra.toUpperCase()) && !palabra.matches("[A-Za-z_][A-Za-z0-9_]*") && !palabra.matches("\\d+") && !palabra.matches("'[^']*'")) {
-                return false;
-            }
-        }
-
-        return true; // Si no se detectaron errores, la consulta es válida
+        return matcher.matches();
     }
 
 
