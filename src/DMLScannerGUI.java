@@ -4,7 +4,6 @@ import java.awt.*;
 import java.util.*;
 import java.util.regex.*;
 
-
 public class DMLScannerGUI extends JFrame {
     private int codeConstantes = 1;
     private int codeIdentificadores = 1;
@@ -22,38 +21,44 @@ public class DMLScannerGUI extends JFrame {
     private DefaultTableModel modeloIdentificadores;
     private DefaultTableModel modeloTokens;
 
- 
-
     private static final Map<String, Integer> RESERVED_WORDS = new HashMap<>();
     private static final Map<String, Integer> DELIMITERS = new HashMap<>();
     private static final Map<String, Integer> OPERATORS = new HashMap<>();
     private static final Map<String, Integer> RELATIONAL_OPERATORS = new HashMap<>();
 
     static {
-        // Palabras reservadas
         RESERVED_WORDS.put("SELECT", 10);
         RESERVED_WORDS.put("FROM", 11);
         RESERVED_WORDS.put("WHERE", 12);
+        RESERVED_WORDS.put("IN", 13);
         RESERVED_WORDS.put("AND", 14);
         RESERVED_WORDS.put("OR", 15);
+        RESERVED_WORDS.put("CREATE", 16);
+        RESERVED_WORDS.put("TABLE", 17);
+        RESERVED_WORDS.put("CHAR", 18);
+        RESERVED_WORDS.put("NUMERIC", 19);
+        RESERVED_WORDS.put("NOT", 20);
+        RESERVED_WORDS.put("NULL", 21);
+        RESERVED_WORDS.put("CONSTRAINT", 22);
+        RESERVED_WORDS.put("KEY", 23);
+        RESERVED_WORDS.put("PRIMARY", 24);
+        RESERVED_WORDS.put("FOREIGN", 25);
+        RESERVED_WORDS.put("REFERENCES", 26);
         RESERVED_WORDS.put("INSERT", 27);
         RESERVED_WORDS.put("INTO", 28);
         RESERVED_WORDS.put("VALUES", 29);
 
-        // Delimitadores
         DELIMITERS.put(",", 50);
         DELIMITERS.put(";", 51);
         DELIMITERS.put("(", 52);
         DELIMITERS.put(")", 53);
         DELIMITERS.put("'", 54);
 
-        // Operadores
         OPERATORS.put("+", 70);
         OPERATORS.put("-", 71);
         OPERATORS.put("*", 72);
         OPERATORS.put("/", 73);
 
-        // Operadores relacionales
         RELATIONAL_OPERATORS.put("=", 83);
         RELATIONAL_OPERATORS.put(">", 81);
         RELATIONAL_OPERATORS.put("<", 82);
@@ -63,11 +68,10 @@ public class DMLScannerGUI extends JFrame {
 
     private static final Pattern TOKEN_PATTERN = Pattern.compile("[A-Za-z_#][A-Za-z0-9_#]*|\\d+|'[^']*'");
 
-
     public static void main(String[] args) {
         EventQueue.invokeLater(() -> {
             try {
-            	DMLScannerGUI ventana = new DMLScannerGUI();
+                DMLScannerGUI ventana = new DMLScannerGUI();
                 ventana.setVisible(true);
             } catch (Exception e) {
                 e.printStackTrace();
@@ -129,7 +133,7 @@ public class DMLScannerGUI extends JFrame {
         panelInferior.add(scrollTablaConstantes);
         panelInferior.add(new JLabel("Identificadores"));
         panelInferior.add(scrollTablaIdentificadores);
-        panelInferior.add(new JLabel("Tabla Lexica"));
+        panelInferior.add(new JLabel("Tabla Léxica"));
         panelInferior.add(scrollTablaTokens);
 
         JScrollPane scrollPanelInferior = new JScrollPane(panelInferior);
@@ -139,178 +143,147 @@ public class DMLScannerGUI extends JFrame {
         panelContenido.add(panelCentral, BorderLayout.CENTER);
         panelContenido.add(scrollPanelInferior, BorderLayout.SOUTH);
     }
-    
-    
-    @SuppressWarnings("unused")
+
     private void analizarConsultaSQL() {
         String input = areaTexto.getText().trim();
-        
+
         if (input.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Esta consulta es invalida", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Esta consulta es inválida", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
-    
-        // Reemplazar comillas incorrectas
+
         input = input.replace("‘", "'").replace("’", "'");
-    
-        // Limpiar las tablas
+
         modeloPalabrasReservadas.setRowCount(0);
         modeloConstantes.setRowCount(0);
         modeloIdentificadores.setRowCount(0);
-        modeloTokens.setRowCount(0); // Asegúrate de limpiar también la tabla de tokens
-    
-        // Resetear valores antes de procesar la consulta
+        modeloTokens.setRowCount(0);
+
         codeConstantes = 1;
         codeIdentificadores = 1;
         identificadoresRegistrados.clear();
         constantesRegistradas.clear();
-    
-        // Verificar la validez general de la consulta SQL
+
         if (!esConsultaSQLValida(input)) {
             JOptionPane.showMessageDialog(this, "Error en la sintaxis de la consulta SQL.", "Error", JOptionPane.ERROR_MESSAGE);
-            return;  // Detener el análisis si la consulta es inválida
+            return;
         }
-    
-        // Separar por líneas
+
         String[] lineas = input.split("\\r?\\n");
         int numLinea = 1;
-    
-        // Map para almacenar los elementos con las líneas
+
         Map<String, Set<Integer>> tokensConLineas = new LinkedHashMap<>();
-    
-        // Procesar cada línea de la consulta
+
         for (String linea : lineas) {
             Matcher matcher = TOKEN_PATTERN.matcher(linea);
             while (matcher.find()) {
                 String token = matcher.group();
-                
-    
-                // Si el token ya existe, agregar las líneas
                 tokensConLineas.computeIfAbsent(token, k -> new HashSet<>()).add(numLinea);
             }
             numLinea++;
         }
-    
-        // Procesar tokens y asignarles tipo
-for (Map.Entry<String, Set<Integer>> entry : tokensConLineas.entrySet()) {
-    String token = entry.getKey();
-    Set<Integer> lineasToken = entry.getValue();
 
-    // Obtener tipo y código del token
-    int tipo = obtenerTipo(token);  // Obtener el tipo (Palabra reservada, Delimitador, etc.)
-    int codigo = obtenerCodigo(token);  // Obtener el código único para identificadores y constantes
-    
-    // Reemplazar las comillas tipográficas (‘ y ’) por comillas simples (')
-    token = token.replace("‘", "'").replace("’", "'");
+        for (Map.Entry<String, Set<Integer>> entry : tokensConLineas.entrySet()) {
+            String token = entry.getKey();
+            Set<Integer> lineasToken = entry.getValue();
 
-    // Eliminar las comillas (tanto simples como tipográficas) del token antes de añadirlo a la tabla
-    String tokenSinComillas = token.replace("'", "");
+            String lineasTexto = obtenerLineasComoCadena(lineasToken);
 
-    // Si el token es una comilla simple o comillas tipográficas, no agregarlo a la tabla de tokens
-    if (token.equals("'")) {
-        continue; // Salta este token y pasa al siguiente
+            int tipo = obtenerTipo(token);
+            int codigo = obtenerCodigo(token);
+
+            token = token.replace("‘", "'").replace("’", "'");
+            String tokenSinComillas = token.replace("'", "");
+
+            if (token.equals("'")) {
+                continue;
+            }
+
+            if (tipo == 1) {
+                modeloPalabrasReservadas.addRow(new Object[]{token, lineasTexto, codigo});
+            } else if (tipo == 6) {
+                String constanteSinComillas = token.replaceAll("^'(.*)'$", "$1");
+                modeloConstantes.addRow(new Object[]{constanteSinComillas, lineasTexto, codigo});
+            } else {
+                modeloIdentificadores.addRow(new Object[]{token, lineasTexto, codigo});
+            }
+
+            if (!token.equals("'")) {
+                modeloTokens.addRow(new Object[]{modeloTokens.getRowCount() + 1, lineasTexto, tokenSinComillas, tipo, codigo});
+            }
+        }
     }
 
-    // Asegurarse de que se agregue correctamente a la tabla de palabras reservadas, identificadores o constantes
-    if (tipo == 1) { // Si es una palabra reservada
-        modeloPalabrasReservadas.addRow(new Object[]{token, lineasToken.toString(), tipo, codigo});
-    } else if (tipo == 6) { // Si es una constante (número o cadena)
-        // Si es una constante y no ha sido registrada, agregarla a la tabla de constantes
-        String constanteSinComillas = token.replaceAll("^'(.*)'$", "$1"); // Eliminar comillas de las constantes
-        modeloConstantes.addRow(new Object[]{constanteSinComillas, lineasToken.toString(), codigo, tipo});
-    } else { // Si es un identificador o algún otro tipo
-        modeloIdentificadores.addRow(new Object[]{token, lineasToken.toString(), codigo, tipo});
+    private String obtenerLineasComoCadena(Set<Integer> lineas) {
+        StringBuilder builder = new StringBuilder();
+        Iterator<Integer> iter = lineas.iterator();
+        while (iter.hasNext()) {
+            builder.append(iter.next());
+            if (iter.hasNext()) {
+                builder.append(", ");
+            }
+        }
+        return builder.toString();
     }
 
-    // Agregar a la tabla de Tokens
-    if (!token.equals("'")) {
-        modeloTokens.addRow(new Object[]{modeloTokens.getRowCount() + 1, lineasToken.toString(), tokenSinComillas, tipo, codigo});
-    }
-}
-
-    }
-    
-    
-    // Método para validar la sintaxis de la consulta SQL
     private boolean esConsultaSQLValida(String consulta) {
         String regex = "(?i)\\s*SELECT\\s+.+?\\s+FROM\\s+.+?(\\s+WHERE\\s+.+)?;?";
         Pattern pattern = Pattern.compile(regex, Pattern.DOTALL);
         Matcher matcher = pattern.matcher(consulta);
 
         if (matcher.matches()) {
-            return true; // Si la consulta coincide con la expresión regular, es válida
+            return true;
         }
-        
-        // Si no es válida, verificamos que no haya palabras "raras" (no reservadas)
+
         String[] palabras = consulta.split("\\s+");
         for (String palabra : palabras) {
-            if (!RESERVED_WORDS.containsKey(palabra.toUpperCase()) && !palabra.matches("[A-Za-z_][A-Za-z0-9_]*") && !palabra.matches("\\d+") && !palabra.matches("'[^']*'")) {
+            if (!RESERVED_WORDS.containsKey(palabra.toUpperCase()) &&
+                !palabra.matches("[A-Za-z_][A-Za-z0-9_]*") &&
+                !palabra.matches("\\d+") &&
+                !palabra.matches("'[^']*'")) {
                 return false;
             }
         }
-
-        return true; // Si no se detectaron errores, la consulta es válida
-
+        return true;
     }
-
-
 
     private final Map<String, Integer> identificadoresRegistrados = new HashMap<>();
     private final Map<String, Integer> constantesRegistradas = new HashMap<>();
 
     private int obtenerTipo(String token) {
-        // Comprobar si es una palabra reservada
         if (RESERVED_WORDS.containsKey(token.toUpperCase())) {
-            return 1;  // Tipo: Palabra reservada
+            return 1;
         }
-    
-        // Comprobar si es un delimitador
         if (DELIMITERS.containsKey(token)) {
-            return 5;  // Tipo: Delimitador
+            return 5;
         }
-    
-        // Comprobar si es un operador
         if (OPERATORS.containsKey(token)) {
-            return 7;  // Tipo: Operador
+            return 7;
         }
-    
-        // Comprobar si es un operador relacional
         if (RELATIONAL_OPERATORS.containsKey(token)) {
-            return 8;  // Tipo: Operador relacional
+            return 8;
         }
-    
-        // Si es una constante (número o cadena) 
         if (token.matches("'[^']*'") || token.matches("\\d+")) {
-            return 6;  // Tipo: Constante
+            return 6;
         }
-    
-        // Si es un identificador
-        return 9;  // Tipo: Identificador (por defecto)
+        return 9;
     }
-    
 
     private int obtenerCodigo(String token) {
-        // Comprobar si es una palabra reservada
         if (RESERVED_WORDS.containsKey(token.toUpperCase())) {
-            return RESERVED_WORDS.get(token.toUpperCase());  // Código de la palabra reservada
+            return RESERVED_WORDS.get(token.toUpperCase());
         }
-    
-        // Comprobar si es una constante (número o cadena) y asignar un código único
         if (token.matches("'[^']*'") || token.matches("\\d+")) {
             if (!constantesRegistradas.containsKey(token)) {
                 constantesRegistradas.put(token, 600 + codeConstantes);
                 codeConstantes++;
             }
-            return constantesRegistradas.get(token);  // Código único para Constante
+            return constantesRegistradas.get(token);
         }
-    
-        // Si es un identificador y no ha sido registrado, asignar un código único
         if (!identificadoresRegistrados.containsKey(token)) {
             identificadoresRegistrados.put(token, 400 + codeIdentificadores);
             codeIdentificadores++;
         }
-    
-        return identificadoresRegistrados.get(token);  // Código único para Identificador
+        return identificadoresRegistrados.get(token);
     }
-    
 }
