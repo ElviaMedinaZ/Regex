@@ -63,9 +63,6 @@ public class DMLScannerGUI extends JFrame {
         RELATIONAL_OPERATORS.put("<=", 85);
     }
 
-    
-    
-
     private static final Pattern TOKEN_PATTERN = Pattern.compile("[A-Za-z_#][A-Za-z0-9_#]*|\\d+|'[^']*'");
 
 
@@ -252,16 +249,10 @@ public class DMLScannerGUI extends JFrame {
     
     // Método para validar la sintaxis de la consulta SQL
     private boolean esConsultaSQLValida(String consulta) {
-        // Expresión regular que valida una consulta SQL básica
-        // Permite que la consulta empiece con cualquier palabra clave reservada válida (como SELECT, INSERT, etc.)
-    	String regex = "(?i)(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP)\\s+" +  // Permitir palabras clave iniciales
-                "(\\*|[A-Za-z_#\\.][A-Za-z0-9_#,\\.\\s]+)\\s+" + // Selección de campos con # y .
-                "FROM\\s+[A-Za-z_#\\.][A-Za-z0-9_#,\\.\\s]+\\s+" + // Tabla desde la que seleccionar con # y .
-                "(WHERE\\s+[A-Za-z_#\\.][A-Za-z0-9_#\\.\\s=><']+)?"+ // Condiciones opcionales con # y .
-                "(AND|OR\\s+[A-Za-z_#\\.][A-Za-z0-9_#\\.\\s=><']+)*"; // Operadores lógicos opcionales con # y .
-
-        Pattern pattern = Pattern.compile(regex);
+        String regex = "(?i)\\s*SELECT\\s+.+?\\s+FROM\\s+.+?(\\s+WHERE\\s+.+)?;?";
+        Pattern pattern = Pattern.compile(regex, Pattern.DOTALL);
         Matcher matcher = pattern.matcher(consulta);
+
         if (matcher.matches()) {
             return true; // Si la consulta coincide con la expresión regular, es válida
         }
@@ -275,6 +266,7 @@ public class DMLScannerGUI extends JFrame {
         }
 
         return true; // Si no se detectaron errores, la consulta es válida
+
     }
 
 
