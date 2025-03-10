@@ -1,1 +1,1 @@
-Error en tabla de CONSTANTES columna de TIPO (falta corregir que los tipos se muestren bien porque solo muestran un "6" todos), error en la tabla lexica (no guarda los delimitadores,peradores y relacionales)
+Error en tabla de CONSTANTES columna de TIPO (falta añadir la columna y que los tipos se muestren bien porque solo muestran un "6" todos), error en la tabla lexica (no guarda los delimitadores,peradores y relacionales)
