@@ -212,11 +212,27 @@ public class AnalizadorSQL extends JFrame {
         for (String linea : lineas) {
             Matcher matcher = TOKEN_PATTERN.matcher(linea);
             while (matcher.find()) {
+
                 String token = matcher.group();
-                System.out.println("Token encontrado: " + token);  // <-- Depuración
+                if (token.matches("(?i)A|AN|AD|ND|A D|A N|A\\s*D|A\\s*N|A\\s*")) {
+                    JOptionPane.showMessageDialog(this, 
+                        "Error: '" + token + "' no es un operador válido. Debes escribir 'AND' completo.", 
+                        "Error de Sintaxis", 
+                        JOptionPane.ERROR_MESSAGE);
+                    return;  // Detiene el análisis
+                }
+
                 
                 int tipoCodigo = obtenerCodigoTipo(token);
-                tokensConLineas.put(token, String.valueOf(numLinea));
+                
+                if (tokensConLineas.containsKey(token)) {
+                     String lineasExistentes = tokensConLineas.get(token);
+                     lineasExistentes += "," + numLinea;
+                     tokensConLineas.put(token, lineasExistentes);
+                 } else {
+                     // Si no existe, guardar la línea inicial
+                     tokensConLineas.put(token, String.valueOf(numLinea));
+                 }
             }
             numLinea++;
         }
@@ -252,7 +268,21 @@ public class AnalizadorSQL extends JFrame {
         String regex = "(?i)\\s*SELECT\\s+.+?\\s+FROM\\s+.+?(\\s+WHERE\\s+.+)?;?";
         Pattern pattern = Pattern.compile(regex, Pattern.DOTALL);
         Matcher matcher = pattern.matcher(consulta);
-        return matcher.matches();
+
+        if (matcher.matches()) {
+            return true; // Si la consulta coincide con la expresión regular, es válida
+        }
+        
+        // Si no es válida, verificamos que no haya palabras "raras" (no reservadas)
+        String[] palabras = consulta.split("\\s+");
+        for (String palabra : palabras) {
+            if (!RESERVED_WORDS.containsKey(palabra.toUpperCase()) && !palabra.matches("[A-Za-z_][A-Za-z0-9_]*") && !palabra.matches("\\d+") && !palabra.matches("'[^']*'")) {
+                return false;
+            }
+        }
+
+        return true; // Si no se detectaron errores, la consulta es válida
+
     }
 
 
