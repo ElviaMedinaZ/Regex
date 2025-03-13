@@ -66,7 +66,10 @@ public class DMLScannerGUI extends JFrame {
         RELATIONAL_OPERATORS.put("<=", 85);
     }
 
-    private static final Pattern TOKEN_PATTERN = Pattern.compile("[A-Za-z_#][A-Za-z0-9_#]*|\\d+|'[^']*'|[(),;]");
+    private static final Pattern TOKEN_PATTERN = 
+    Pattern.compile("[A-Za-z_#][A-Za-z0-9_#]*|\\d+|('[^']*')|[(),;]");
+
+
 
     public static void main(String[] args) {
         EventQueue.invokeLater(() -> {
@@ -174,7 +177,7 @@ public class DMLScannerGUI extends JFrame {
         String[] lineas = input.split("\\r?\\n");
         int numLinea = 1;
     
-        Map<String, Set<Integer>> identificadoresConLineas = new LinkedHashMap<>(); // Mantener el orden de aparición
+        Map<String, Set<Integer>> identificadoresConLineas = new LinkedHashMap<>();
     
         for (String linea : lineas) {
             Matcher matcher = TOKEN_PATTERN.matcher(linea);
@@ -183,29 +186,54 @@ public class DMLScannerGUI extends JFrame {
                 int tipo = obtenerTipo(token);
                 int codigo = obtenerCodigo(token);
     
-                if (token.equals("'")) {
-                    // Agregar el apóstrofe como delimitador con código 52
-                    modeloTokens.addRow(new Object[]{modeloTokens.getRowCount() + 1, numLinea, token, 5, 52});
-                    continue;
-                }
     
+                boolean yaProcesado = false;
+
+                if (tipo == 6) { 
+                    if (token.startsWith("'") && token.endsWith("'")) { 
+                        String constanteSinComillas = token.substring(1, token.length() - 1);
+                
+                        // Agregar la primera comilla
+                        modeloTokens.addRow(new Object[]{modeloTokens.getRowCount() + 1, numLinea, "'", 5, 54});
+                
+                        // 🔥 Verificar si la constante ya existe en modeloConstantes antes de agregarla
+                        boolean existeEnConstantes = false;
+                        for (int i = 0; i < modeloConstantes.getRowCount(); i++) {
+                            if (modeloConstantes.getValueAt(i, 0).equals(constanteSinComillas)) {
+                                existeEnConstantes = true;
+                                break;
+                            }
+                        }
+                
+                        // Si no existe, la agregamos a la tabla de constantes
+                        if (!existeEnConstantes) {
+                            modeloConstantes.addRow(new Object[]{constanteSinComillas, numLinea, 62, codigo});
+                        }
+                
+                        // Agregar la constante sin comillas en tokens
+                        modeloTokens.addRow(new Object[]{modeloTokens.getRowCount() + 1, numLinea, constanteSinComillas, 6, codigo}); 
+                
+                        // Agregar la segunda comilla
+                        modeloTokens.addRow(new Object[]{modeloTokens.getRowCount() + 1, numLinea, "'", 5, 54});
+                
+                        yaProcesado = true;  // Marcamos como procesado
+                    } 
+                else { // Es un número, no tiene comillas
+                        modeloConstantes.addRow(new Object[]{token, numLinea, 61, codigo});
+                    }
+                }
+                
                 if (tipo == 1) {
                     modeloPalabrasReservadas.addRow(new Object[]{token, numLinea, codigo});
-                } else if (tipo == 6) {
-                    // Separar el apóstrofe de las constantes y registrar solo el valor interno
-                    modeloTokens.addRow(new Object[]{modeloTokens.getRowCount() + 1, numLinea, "'", 5, 52}); // Primer '
-                    
-                    String constanteSinComillas = token.replaceAll("^'(.*)'$", "$1");
-                    int tipoConstante = token.matches("\\d+") ? 61 : 62; // 61 para números, 62 para texto
-                    modeloConstantes.addRow(new Object[]{constanteSinComillas, numLinea, tipoConstante, codigo});
-                    modeloTokens.addRow(new Object[]{modeloTokens.getRowCount() + 1, numLinea, constanteSinComillas, tipoConstante, codigo});
-                    
-                    modeloTokens.addRow(new Object[]{modeloTokens.getRowCount() + 1, numLinea, "'", 5, 52}); // Segundo '
-                } else if (tipo == 4) { // Solo identificadores (evita delimitadores y operadores)
+                } else if (tipo == 4) { 
                     identificadoresConLineas.computeIfAbsent(token, k -> new LinkedHashSet<>()).add(numLinea);
                 }
-    
-                modeloTokens.addRow(new Object[]{modeloTokens.getRowCount() + 1, numLinea, token, tipo, codigo});
+                
+                   
+                // 🔥 CORRECCIÓN: Asegurar que los números SÍ se agreguen en tokens
+                if (!yaProcesado || tipo == 2) {  // Permitir números sin comillas
+                    modeloTokens.addRow(new Object[]{modeloTokens.getRowCount() + 1, numLinea, token, tipo, codigo});
+                }
             }
             numLinea++;
         }
@@ -213,7 +241,7 @@ public class DMLScannerGUI extends JFrame {
         // Agregar identificadores con líneas separadas por comas
         for (Map.Entry<String, Set<Integer>> entry : identificadoresConLineas.entrySet()) {
             String token = entry.getKey();
-            String lineasTexto = entry.getValue().toString().replaceAll("[\\[\\]]", ""); // Formatear líneas
+            String lineasTexto = entry.getValue().toString().replaceAll("[\\[\\]]", ""); 
             int codigo = obtenerCodigo(token);
             modeloIdentificadores.addRow(new Object[]{token, lineasTexto, codigo});
         }
