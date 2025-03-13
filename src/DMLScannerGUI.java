@@ -189,54 +189,65 @@ public class DMLScannerGUI extends JFrame {
     
                 boolean yaProcesado = false;
 
-                if (tipo == 6) { 
-                    if (token.startsWith("'") && token.endsWith("'")) { 
-                        String constanteSinComillas = token.substring(1, token.length() - 1);
-                
-                        // Agregar la primera comilla
-                        modeloTokens.addRow(new Object[]{modeloTokens.getRowCount() + 1, numLinea, "'", 5, 54});
-                
-                        // 🔥 Verificar si la constante ya existe en modeloConstantes antes de agregarla
-                        boolean existeEnConstantes = false;
-                        for (int i = 0; i < modeloConstantes.getRowCount(); i++) {
-                            if (modeloConstantes.getValueAt(i, 0).equals(constanteSinComillas)) {
-                                existeEnConstantes = true;
-                                break;
-                            }
-                        }
-                
-                        // Si no existe, la agregamos a la tabla de constantes
-                        if (!existeEnConstantes) {
-                            modeloConstantes.addRow(new Object[]{constanteSinComillas, numLinea, 62, codigo});
-                        }
-                
-                        // Agregar la constante sin comillas en tokens
-                        modeloTokens.addRow(new Object[]{modeloTokens.getRowCount() + 1, numLinea, constanteSinComillas, 6, codigo}); 
-                
-                        // Agregar la segunda comilla
-                        modeloTokens.addRow(new Object[]{modeloTokens.getRowCount() + 1, numLinea, "'", 5, 54});
-                
-                        yaProcesado = true;  // Marcamos como procesado
-                    } 
-                else { // Es un número, no tiene comillas
-                        modeloConstantes.addRow(new Object[]{token, numLinea, 61, codigo});
-                    }
-                }
-                
-                if (tipo == 1) {
-                    modeloPalabrasReservadas.addRow(new Object[]{token, numLinea, codigo});
-                } else if (tipo == 4) { 
-                    identificadoresConLineas.computeIfAbsent(token, k -> new LinkedHashSet<>()).add(numLinea);
-                }
-                
-                   
-                // 🔥 CORRECCIÓN: Asegurar que los números SÍ se agreguen en tokens
-                if (!yaProcesado || tipo == 2) {  // Permitir números sin comillas
-                    modeloTokens.addRow(new Object[]{modeloTokens.getRowCount() + 1, numLinea, token, tipo, codigo});
+                boolean yaProcesado = false;
+
+// 🔹 Si el token es una constante alfanumérica con comillas
+if (tipo == 6) { 
+    if (token.startsWith("'") && token.endsWith("'")) { 
+        String constanteSinComillas = token.substring(1, token.length() - 1);
+
+        // Agregar la primera comilla como delimitador
+        modeloTokens.addRow(new Object[]{modeloTokens.getRowCount() + 1, numLinea, "'", 5, 54});
+
+        // Verificar si la constante ya está en la tabla de constantes
+        boolean existeEnConstantes = false;
+        for (int i = 0; i < modeloConstantes.getRowCount(); i++) {
+            if (modeloConstantes.getValueAt(i, 0).equals(constanteSinComillas)) {
+                existeEnConstantes = true;
+                break;
+            }
+        }
+
+        // Si no existe, agregarla a la tabla de constantes
+        if (!existeEnConstantes) {
+            modeloConstantes.addRow(new Object[]{constanteSinComillas, numLinea, 62, codigo});
+        }
+
+        // Agregar la constante sin comillas a la tabla de tokens
+        modeloTokens.addRow(new Object[]{modeloTokens.getRowCount() + 1, numLinea, constanteSinComillas, 6, codigo}); 
+
+        // Agregar la segunda comilla como delimitador
+        modeloTokens.addRow(new Object[]{modeloTokens.getRowCount() + 1, numLinea, "'", 5, 54});
+
+        yaProcesado = true;  // Marcamos que ya se procesó
+    } 
+
+
+
+            else { // Es un número, no tiene comillas
+                    modeloConstantes.addRow(new Object[]{token, numLinea, 61, codigo});
                 }
             }
-            numLinea++;
+            
+            if (tipo == 1) {
+                modeloPalabrasReservadas.addRow(new Object[]{token, numLinea, codigo});
+            } else if (tipo == 4) { 
+                identificadoresConLineas.computeIfAbsent(token, k -> new LinkedHashSet<>()).add(numLinea);
+            }
+
+            String operadores = "=+-*/<>";  // Lista de operadores válidos (ajusta según tu lenguaje)
+
+            if (operadores.contains(token)) {
+                modeloTokens.addRow(new Object[]{modeloTokens.getRowCount() + 1, numLinea, token, 7, 55}); // Tipo 7 y código 55 (ajústalo según la tabla)
+                yaProcesado = true;  // Evita que se agregue de nuevo más abajo
+            } 
+            
+            if (!yaProcesado || tipo == 2) {  // Permitir números sin comillas
+                modeloTokens.addRow(new Object[]{modeloTokens.getRowCount() + 1, numLinea, token, tipo, codigo});
+            }
         }
+        numLinea++;
+    }
     
         // Agregar identificadores con líneas separadas por comas
         for (Map.Entry<String, Set<Integer>> entry : identificadoresConLineas.entrySet()) {
