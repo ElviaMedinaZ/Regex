@@ -64,6 +64,7 @@ public class pruebas extends JFrame {
         });
     }
 
+    @SuppressWarnings("unused")
     public pruebas() {
         setTitle("Analizador de SQL");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);

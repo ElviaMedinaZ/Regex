@@ -36,6 +36,7 @@ public class Frame extends JFrame {
         });
     }
 
+    @SuppressWarnings("unused")
     public Frame() {
         setTitle("Extractor de Números");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);

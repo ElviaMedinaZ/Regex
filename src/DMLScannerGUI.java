@@ -79,6 +79,7 @@ public class DMLScannerGUI extends JFrame {
         });
     }
 
+    @SuppressWarnings("unused")
     public DMLScannerGUI() {
         setTitle("ANALIZADOR DE CONSULTAS SQL");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -144,88 +145,71 @@ public class DMLScannerGUI extends JFrame {
         panelContenido.add(scrollPanelInferior, BorderLayout.SOUTH);
     }
 
+    @SuppressWarnings("unused")
     private void analizarConsultaSQL() {
         String input = areaTexto.getText().trim();
-
+    
         if (input.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Esta consulta es inválida", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
-
+    
         input = input.replace("‘", "'").replace("’", "'");
-
+    
         modeloPalabrasReservadas.setRowCount(0);
         modeloConstantes.setRowCount(0);
         modeloIdentificadores.setRowCount(0);
         modeloTokens.setRowCount(0);
-
+    
         codeConstantes = 1;
         codeIdentificadores = 1;
         identificadoresRegistrados.clear();
         constantesRegistradas.clear();
-
+    
         if (!esConsultaSQLValida(input)) {
             JOptionPane.showMessageDialog(this, "Error en la sintaxis de la consulta SQL.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
-
+    
         String[] lineas = input.split("\\r?\\n");
         int numLinea = 1;
-
-        Map<String, Set<Integer>> tokensConLineas = new LinkedHashMap<>();
-
+    
+        Map<String, Set<Integer>> identificadoresConLineas = new LinkedHashMap<>(); // Mantiene el orden de aparición
+    
         for (String linea : lineas) {
             Matcher matcher = TOKEN_PATTERN.matcher(linea);
             while (matcher.find()) {
                 String token = matcher.group();
-                tokensConLineas.computeIfAbsent(token, k -> new HashSet<>()).add(numLinea);
+                int tipo = obtenerTipo(token);
+                int codigo = obtenerCodigo(token);
+    
+                if (token.equals("'")) {
+                    continue;
+                }
+    
+                if (tipo == 1) {
+                    modeloPalabrasReservadas.addRow(new Object[]{token, numLinea, codigo});
+                } else if (tipo == 6) {
+                    String constanteSinComillas = token.replaceAll("^'(.*)'$", "$1");
+                    int tipoConstante = token.matches("\\d+") ? 61 : 62; // 61 para números, 62 para texto
+                    modeloConstantes.addRow(new Object[]{constanteSinComillas, numLinea, tipoConstante, codigo});
+                } else if (tipo == 4) { // Solo identificadores (evita delimitadores y operadores)
+                    identificadoresConLineas.computeIfAbsent(token, k -> new LinkedHashSet<>()).add(numLinea);
+                }
+    
+                modeloTokens.addRow(new Object[]{modeloTokens.getRowCount() + 1, numLinea, token, tipo, codigo});
             }
             numLinea++;
         }
-
-        for (Map.Entry<String, Set<Integer>> entry : tokensConLineas.entrySet()) {
+    
+        // Agregar identificadores con líneas separadas por comas
+        for (Map.Entry<String, Set<Integer>> entry : identificadoresConLineas.entrySet()) {
             String token = entry.getKey();
-            Set<Integer> lineasToken = entry.getValue();
-
-            String lineasTexto = obtenerLineasComoCadena(lineasToken);
-
-            int tipo = obtenerTipo(token);
+            String lineasTexto = entry.getValue().toString().replaceAll("[\\[\\]]", ""); // Formatear líneas
             int codigo = obtenerCodigo(token);
-
-            token = token.replace("‘", "'").replace("’", "'");
-            String tokenSinComillas = token.replace("'", "");
-
-            if (token.equals("'")) {
-                continue;
-            }
-
-            if (tipo == 1) {
-                modeloPalabrasReservadas.addRow(new Object[]{token, lineasTexto, codigo});
-            } else if (tipo == 6) {
-                String constanteSinComillas = token.replaceAll("^'(.*)'$", "$1");
-                int tipoConstante = token.matches("\\d+") ? 61 : 62; // 61 para números, 62 para texto
-                modeloConstantes.addRow(new Object[]{constanteSinComillas, lineasTexto,tipoConstante, codigo});
-            } else {
-                modeloIdentificadores.addRow(new Object[]{token, lineasTexto, codigo});
-            }
-
-            if (!token.equals("'")) {
-                modeloTokens.addRow(new Object[]{modeloTokens.getRowCount() + 1, lineasTexto, tokenSinComillas, tipo, codigo});
-            }
+            modeloIdentificadores.addRow(new Object[]{token, lineasTexto, codigo});
         }
-    }
-
-    private String obtenerLineasComoCadena(Set<Integer> lineas) {
-        StringBuilder builder = new StringBuilder();
-        Iterator<Integer> iter = lineas.iterator();
-        while (iter.hasNext()) {
-            builder.append(iter.next());
-            if (iter.hasNext()) {
-                builder.append(", ");
-            }
-        }
-        return builder.toString();
-    }
+    }    
 
     private boolean esConsultaSQLValida(String consulta) {
         String regex = "(?i)\\s*SELECT\\s+.+?\\s+FROM\\s+.+?(\\s+WHERE\\s+.+)?;?";
