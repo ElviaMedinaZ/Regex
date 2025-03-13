@@ -67,7 +67,8 @@ public class DMLScannerGUI extends JFrame {
     }
 
     private static final Pattern TOKEN_PATTERN = 
-    Pattern.compile("[A-Za-z_#][A-Za-z0-9_#]*|\\d+|('[^']*')|[(),;]");
+    Pattern.compile("[A-Za-z_#][A-Za-z0-9_#]*|\\d+|('[^']*')|[(),;]|[+\\-*/=<>]=?");
+
 
 
 
@@ -189,8 +190,6 @@ public class DMLScannerGUI extends JFrame {
     
                 boolean yaProcesado = false;
 
-                boolean yaProcesado = false;
-
 // 🔹 Si el token es una constante alfanumérica con comillas
 if (tipo == 6) { 
     if (token.startsWith("'") && token.endsWith("'")) { 
@@ -235,7 +234,7 @@ if (tipo == 6) {
                 identificadoresConLineas.computeIfAbsent(token, k -> new LinkedHashSet<>()).add(numLinea);
             }
 
-            String operadores = "=+-*/<>";  // Lista de operadores válidos (ajusta según tu lenguaje)
+            String operadores = "=+-*/<>";  // Lista de operadores válidos 
 
             if (operadores.contains(token)) {
                 modeloTokens.addRow(new Object[]{modeloTokens.getRowCount() + 1, numLinea, token, 7, 55}); // Tipo 7 y código 55 (ajústalo según la tabla)
