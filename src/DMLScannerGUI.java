@@ -174,7 +174,7 @@ public class DMLScannerGUI extends JFrame {
         String[] lineas = input.split("\\r?\\n");
         int numLinea = 1;
     
-        Map<String, Set<Integer>> identificadoresConLineas = new LinkedHashMap<>(); // Mantiene el orden de aparición
+        Map<String, Set<Integer>> identificadoresConLineas = new LinkedHashMap<>(); // Mantener el orden de aparición
     
         for (String linea : lineas) {
             Matcher matcher = TOKEN_PATTERN.matcher(linea);
@@ -184,15 +184,23 @@ public class DMLScannerGUI extends JFrame {
                 int codigo = obtenerCodigo(token);
     
                 if (token.equals("'")) {
+                    // Agregar el apóstrofe como delimitador con código 52
+                    modeloTokens.addRow(new Object[]{modeloTokens.getRowCount() + 1, numLinea, token, 5, 52});
                     continue;
                 }
     
                 if (tipo == 1) {
                     modeloPalabrasReservadas.addRow(new Object[]{token, numLinea, codigo});
                 } else if (tipo == 6) {
+                    // Separar el apóstrofe de las constantes y registrar solo el valor interno
+                    modeloTokens.addRow(new Object[]{modeloTokens.getRowCount() + 1, numLinea, "'", 5, 52}); // Primer '
+                    
                     String constanteSinComillas = token.replaceAll("^'(.*)'$", "$1");
                     int tipoConstante = token.matches("\\d+") ? 61 : 62; // 61 para números, 62 para texto
                     modeloConstantes.addRow(new Object[]{constanteSinComillas, numLinea, tipoConstante, codigo});
+                    modeloTokens.addRow(new Object[]{modeloTokens.getRowCount() + 1, numLinea, constanteSinComillas, tipoConstante, codigo});
+                    
+                    modeloTokens.addRow(new Object[]{modeloTokens.getRowCount() + 1, numLinea, "'", 5, 52}); // Segundo '
                 } else if (tipo == 4) { // Solo identificadores (evita delimitadores y operadores)
                     identificadoresConLineas.computeIfAbsent(token, k -> new LinkedHashSet<>()).add(numLinea);
                 }
@@ -209,7 +217,8 @@ public class DMLScannerGUI extends JFrame {
             int codigo = obtenerCodigo(token);
             modeloIdentificadores.addRow(new Object[]{token, lineasTexto, codigo});
         }
-    }    
+    }
+    
 
     private boolean esConsultaSQLValida(String consulta) {
         String regex = "(?i)\\s*SELECT\\s+.+?\\s+FROM\\s+.+?(\\s+WHERE\\s+.+)?;?";
