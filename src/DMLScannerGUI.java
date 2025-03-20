@@ -67,10 +67,8 @@ public class DMLScannerGUI extends JFrame {
     }
 
     private static final Pattern TOKEN_PATTERN = 
-    Pattern.compile("[A-Za-z_#][A-Za-z0-9_#]*|\\d+|('[^']*')|[(),;]|[+\\-*/=<>]=?");
-
-
-
+    Pattern.compile("[A-Za-z_#][A-Za-z0-9_#]*|\\d+(\\.\\d+)?|('[^']*')|[.,;()]|[+\\-*/=<>]=?");
+    
 
     public static void main(String[] args) {
         EventQueue.invokeLater(() -> {
@@ -251,6 +249,11 @@ if (tipo == 6) {
         // Agregar identificadores con líneas separadas por comas
         for (Map.Entry<String, Set<Integer>> entry : identificadoresConLineas.entrySet()) {
             String token = entry.getKey();
+
+            if (token.contains(".")) { 
+                continue; 
+            }
+            
             String lineasTexto = entry.getValue().toString().replaceAll("[\\[\\]]", ""); 
             int codigo = obtenerCodigo(token);
             modeloIdentificadores.addRow(new Object[]{token, lineasTexto, codigo});
