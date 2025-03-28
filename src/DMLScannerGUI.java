@@ -206,6 +206,11 @@ public class DMLScannerGUI extends JFrame {
             if (!errorYaRegistrado(mensajeError)) {
                 modeloErores.addRow(new Object[]{mensajeError});
                 System.out.println("Error agregado: " + mensajeError);  // Depuración
+                
+                tablaConstantes.setVisible(false);
+                tablaIdentificadores.setVisible(false);
+                tablaTokens.setVisible(false);
+                
             }
         }
     
@@ -215,6 +220,10 @@ public class DMLScannerGUI extends JFrame {
             if (!errorYaRegistrado(mensajeError)) {
                 modeloErores.addRow(new Object[]{mensajeError});
                 System.out.println("Error agregado: " + mensajeError);  // Depuración
+                tablaConstantes.setVisible(false);
+                tablaIdentificadores.setVisible(false);
+                tablaTokens.setVisible(false);
+                
             }
         }
     
@@ -305,6 +314,11 @@ public class DMLScannerGUI extends JFrame {
     
 
     private boolean esConsultaSQLValida(String consulta) {
+    	
+        tablaConstantes.setVisible(true);
+        tablaIdentificadores.setVisible(true);
+        tablaTokens.setVisible(true);
+    	
         String regex = "(?i)\\s*SELECT\\s+.+?\\s+FROM\\s+.+?(\\s+WHERE\\s+.+)?;?";
         Pattern pattern = Pattern.compile(regex, Pattern.DOTALL);
         Matcher matcher = pattern.matcher(consulta);
