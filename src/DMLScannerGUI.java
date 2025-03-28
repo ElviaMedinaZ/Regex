@@ -15,16 +15,21 @@ public class DMLScannerGUI extends JFrame {
     private JTable tablaConstantes;
     private JTable tablaIdentificadores;
     private JTable tablaTokens;
+    private JTable tablaErrores;
 
     private DefaultTableModel modeloPalabrasReservadas;
     private DefaultTableModel modeloConstantes;
     private DefaultTableModel modeloIdentificadores;
     private DefaultTableModel modeloTokens;
+    private DefaultTableModel modeloErores;
 
     private static final Map<String, Integer> RESERVED_WORDS = new HashMap<>();
     private static final Map<String, Integer> DELIMITERS = new HashMap<>();
     private static final Map<String, Integer> OPERATORS = new HashMap<>();
     private static final Map<String, Integer> RELATIONAL_OPERATORS = new HashMap<>();
+    private static final Set<Character> INVALID_CHARACTERS = new HashSet<>(Arrays.asList(
+        '&', '$', '%', '!', '?', '[', ']', '{', '}', '^', '¨', '¬', '|', '\\', '"'
+    ));
 
     static {
         RESERVED_WORDS.put("SELECT", 10);
@@ -66,9 +71,10 @@ public class DMLScannerGUI extends JFrame {
         RELATIONAL_OPERATORS.put("<=", 85);
     }
 
+    // Añadir un patrón para caracteres inválidos al final
     private static final Pattern TOKEN_PATTERN = 
-    Pattern.compile("[A-Za-z_#][A-Za-z0-9_#]*|\\d+(\\.\\d+)?|('[^']*')|[.,;()]|[+\\-*/=<>]=?");
-    
+    Pattern.compile("[A-Za-z_#][A-Za-z0-9_#]*|\\d+(\\.\\d+)?|('[^']*')|[.,;()]|[+\\-*/=<>]=?|[^A-Za-z0-9_#'.,;()\\+\\-*/=<>\\s]");
+
 
     public static void main(String[] args) {
         EventQueue.invokeLater(() -> {
@@ -108,14 +114,17 @@ public class DMLScannerGUI extends JFrame {
         modeloConstantes = new DefaultTableModel(new String[]{"Constante", "Línea","Tipo", "Valor"}, 0);
         modeloIdentificadores = new DefaultTableModel(new String[]{"Identificador", "Línea", "Valor"}, 0);
         modeloTokens = new DefaultTableModel(new String[]{"No.", "Línea", "Token", "Tipo", "Código"}, 0);
+        modeloErores = new DefaultTableModel(new String[]{"Errores"},0);//rellena este parametro.
 
         tablaConstantes = new JTable(modeloConstantes);
         tablaIdentificadores = new JTable(modeloIdentificadores);
         tablaTokens = new JTable(modeloTokens);
+        tablaErrores = new JTable(modeloErores);
 
         JScrollPane scrollTablaConstantes = new JScrollPane(tablaConstantes);
         JScrollPane scrollTablaIdentificadores = new JScrollPane(tablaIdentificadores);
         JScrollPane scrollTablaTokens = new JScrollPane(tablaTokens);
+        JScrollPane scrollTablaErrores= new JScrollPane(tablaErrores);
 
         JPanel panelSuperior = new JPanel(new BorderLayout());
         panelSuperior.setBackground(new Color(230, 255, 240));
@@ -136,6 +145,8 @@ public class DMLScannerGUI extends JFrame {
         panelInferior.add(scrollTablaConstantes);
         panelInferior.add(new JLabel("Identificadores"));
         panelInferior.add(scrollTablaIdentificadores);
+        panelInferior.add(new JLabel("Erores"));
+        panelInferior.add(scrollTablaErrores);
         panelInferior.add(new JLabel("Tabla Léxica"));
         panelInferior.add(scrollTablaTokens);
 
@@ -162,6 +173,7 @@ public class DMLScannerGUI extends JFrame {
         modeloConstantes.setRowCount(0);
         modeloIdentificadores.setRowCount(0);
         modeloTokens.setRowCount(0);
+        modeloErores.setRowCount(0);
     
         codeConstantes = 1;
         codeIdentificadores = 1;
@@ -186,19 +198,39 @@ public class DMLScannerGUI extends JFrame {
                 int codigo = obtenerCodigo(token);
     
     
-                boolean yaProcesado = false;
+        boolean yaProcesado = false;
 
+        // Error de token desconocido
+        if (tipo == -1) {
+            String mensajeError = "Error: carácter desconocido (" + token + "), encontrado en el renglón " + numLinea + ".";
+            if (!errorYaRegistrado(mensajeError)) {
+                modeloErores.addRow(new Object[]{mensajeError});
+                System.out.println("Error agregado: " + mensajeError);  // Depuración
+            }
+        }
+    
+        // Error de token inválido
+        if (tipo == -2) {
+            String mensajeError = "Error: el carácter '" + token + "' no es un delimitador válido, encontrado en el renglón " + numLinea + ".";
+            if (!errorYaRegistrado(mensajeError)) {
+                modeloErores.addRow(new Object[]{mensajeError});
+                System.out.println("Error agregado: " + mensajeError);  // Depuración
+            }
+        }
+    
+   
+                
 // 🔹 Si el token es una constante alfanumérica con comillas
-if (tipo == 6) { 
-    if (token.startsWith("'") && token.endsWith("'")) { 
-        String constanteSinComillas = token.substring(1, token.length() - 1);
+    if (tipo == 6) { 
+        if (token.startsWith("'") && token.endsWith("'")) { 
+          String constanteSinComillas = token.substring(1, token.length() - 1);
 
         // Agregar la primera comilla como delimitador
-        modeloTokens.addRow(new Object[]{modeloTokens.getRowCount() + 1, numLinea, "'", 5, 54});
+         modeloTokens.addRow(new Object[]{modeloTokens.getRowCount() + 1, numLinea, "'", 5, 54});
 
         // Verificar si la constante ya está en la tabla de constantes
-        boolean existeEnConstantes = false;
-        for (int i = 0; i < modeloConstantes.getRowCount(); i++) {
+         boolean existeEnConstantes = false;
+         for (int i = 0; i < modeloConstantes.getRowCount(); i++) {
             if (modeloConstantes.getValueAt(i, 0).equals(constanteSinComillas)) {
                 existeEnConstantes = true;
                 break;
@@ -259,6 +291,17 @@ if (tipo == 6) {
             modeloIdentificadores.addRow(new Object[]{token, lineasTexto, codigo});
         }
     }
+
+    private boolean errorYaRegistrado(String mensajeError) {
+        for (int i = 0; i < modeloErores.getRowCount(); i++) {
+            String errorExistente = (String) modeloErores.getValueAt(i, 0);
+            if (errorExistente.equals(mensajeError)) {
+                return true; // El error ya existe en la tabla
+            }
+        }
+        return false; // No se encontró el error, se puede agregar
+    }
+    
     
 
     private boolean esConsultaSQLValida(String consulta) {
@@ -301,7 +344,15 @@ if (tipo == 6) {
         if (token.matches("'[^']*'") || token.matches("\\d+")) {
             return 6;
         }
-        return 4;
+        if (token.matches("[A-Za-z_#][A-Za-z0-9_#]*")) return 4;
+
+            // Verificar caracteres inválidos
+        for (char c : token.toCharArray()) {
+            if (INVALID_CHARACTERS.contains(c)) {
+                return -2;  // Error: carácter inválido
+            }
+        }
+        return -1;  // Error desconocido
     }
 
     private int obtenerCodigo(String token) {
